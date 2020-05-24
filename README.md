@@ -8,11 +8,18 @@ The tabula library is requiered in python:
 https://tabula-py.readthedocs.io/en/latest/tabula.html#tabula.io.build_options
 
 The following folder structure is needed:
-.
+`.
 ├── _archive
+
 ├── csv # Intermediate step
+
 ├── json # This is your output
+
 ├── movements # Store here your pdfs
+
 ├── pdf_to_csv_with_tabula.py
+
 ├── extract.pl
+
 └── README.md
+`
