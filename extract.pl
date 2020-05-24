@@ -1,129 +1,105 @@
 use strict;
 use utf8;
-use CAM::PDF;
-use CAM::PDF::PageText;
+
 use Data::Dumper;
 use JSON;
+use Text::CSV;
 
-my @filenames = (
-	"2020_04_22.pdf", 
-	"2019_06_21.pdf", 
-	"2019_05_22.pdf"
-);
+my $debug = 0;
+
+my $src = "movements"; # Folder where all your pdfs are
+my $converted = "csv"; # Folder where pdfs will be converted to csv
+
+# Transform pdf to csv
+system("python pdf_to_csv_with_tabula.py $src $converted");
+print "PDF to CSV done\n";
+exit
+
+
+print "Processing data...\n";
 my @expenses;
-foreach my $filename (@filenames){
-	undef @expenses ; # clean file
-	my $pages = get_number_of_pages($filename);
-	print "There are $pages pages\n";
-	if ($pages eq 1){
-		get_first_page(get_string_from_pdf_file($filename, 1));
-	}else{
-		get_first_page(get_string_from_pdf_file($filename, 1));
-		if ($pages gt 2){
-			foreach my $page_num (2..$pages-1){
-				get_mid_page(get_string_from_pdf_file($filename, $page_num));
+
+my @files = glob( $converted . '/*.csv' );
+my $csv = Text::CSV->new({ sep_char => ',' });
+foreach my $filename (@files){
+	print "Processing $filename\n";
+	undef @expenses; # remove data from previos interaction
+	open(my $data, '<', $filename) or die "Could not open '$filename' $!\n";
+	while (my $line = <$data>) {
+		chomp $line;
+	 
+		if ($csv->parse($line)) {
+			my @fields = $csv->fields();
+			my %expense;
+			if (scalar(@fields) eq 4){
+				
+				my ($date_created, $date_paid, $name, $transaction) = @fields;
+				save_entry($date_created, $date_paid, $name, $transaction);
+			}elsif(scalar(@fields) eq 7){
+				
+				my ($date_created, $date_paid, $name,$currency, $price_in_currency, $conversion,  $transaction) = @fields;
+				save_entry($date_created, $date_paid, $name, $transaction);
+			}else{
+				print "Invalid line $line\n";
 			}
+			
+		}else {
+			warn "Line could not be parsed: $line\n";
 		}
-		get_last_page(get_string_from_pdf_file($filename, $pages));
 	}
+	
 	save_results($filename, {data =>\@expenses});
-	print Dumper(\@expenses);
-	
+	print Dumper(	\@expenses);
+
 }
 
+=head1 save_entry
 
-sub get_number_of_pages {
+=head1 Stores an entry in the global array of expenses
+
+=cut
+sub save_entry {
 	
-	my ($filename) = @_;
+	my ($date_paid, $date_created, $name, $transaction) = @_;
 	
-	return CAM::PDF->new($filename)->numPages();
-}
-
-sub get_last_page{
-
-	my ($pdf_string) = @_;
-	my ($intro, $row_data) = split /Übertrag von Seite\s+\d\s+\+\s(?:\d+\.)?\d{1,3},\d{2}\s/, $pdf_string;
-	# print "$pdf_string\n";
-	my ($data, $trailing) = split /(?:\d+\.)?\d{1,3},\d{2}\+ Neuer Saldo/, $row_data;
-	$data =~ s/\n//g;
-	my @entries = split /\s-\s|\s\+\s/, $data;
-
-	foreach my $entry (@entries){
-		# print $entry . "\n";
-		my ($name, $expense, $date_made, $date_paid) = ($1, $2, $3, $4) if ($entry =~ m/^(.+)\s((?:\d+\.)?\d{1,3},\d{2})\s(\d{2}\.\d{2}\.\d{2})\s(\d{2}\.\d{2}\.\d{2})$/);
-		next if (skip_entry($name) or !defined($name));
-		my %expense = (
-			'name' => $name,
-			'price' => $expense,
-			'date_created' => $date_made,
-			'date_paid' => $date_paid,
-		);
-		push @expenses, \%expense;
-	}		
-}
-
-sub get_mid_page{
-
-	my ($pdf_string) = @_;
-	
-	my ($intro, $row_data) = split /Übertrag von Seite\s+\d\s+\+\s(?:\d+\.)?\d{1,3},\d{2}\s/, $pdf_string;
-	my ($data, $trailing) = split / - Zwischensumme/, $row_data;
-	$data =~ s/\n//g;
-	my @entries = split /\s-\s|\s\+\s/, $data;
-
-	foreach my $entry (@entries){
-		# print $entry . "\n";
-		my ($name, $expense, $date_made, $date_paid) = ($1, $2, $3, $4) if ($entry =~ m/^(.+)\s((?:\d+\.)?\d{1,3},\d{2})\s(\d{2}\.\d{2}\.\d{2})\s(\d{2}\.\d{2}\.\d{2})$/);
-		next if (skip_entry($name) or !defined($name));
-		my %expense = (
-			'name' => $name,
-			'price' => $expense,
-			'date_created' => $date_made,
-			'date_paid' => $date_paid,
-		);
-		push @expenses, \%expense;
-	}		
-}
-
-
-sub get_first_page{
-
-	my ($pdf_string) = @_;
-	
-	my ($intro, $row_data) = split /Abrechnung \d{2}\.\d{2}\.\d{2}\s\+\s(?:\d\.)?\d{3},\d{2}\s/, $pdf_string;
-	my ($data, $trailing) = split /Zwischensumme/, $row_data;
-	$data =~ s/\n//g;
-	my @entries = split /\s-\s|\s\+\s/, $data;
-
-	foreach my $entry (@entries){
-		# print $entry . "\n";
-		my ($name, $expense, $date_made, $date_paid) = ($1, $2, $3, $4) if ($entry =~ m/^(.+)\s((?:\d+\.)?\d{1,3},\d{2})\s(\d{2}\.\d{2}\.\d{2})\s(\d{2}\.\d{2}\.\d{2})$/);
-		next if (skip_entry($name) or !defined($name));
-		my %expense = (
-			'name' => $name,
-			'price' => $expense,
-			'date_created' => $date_made,
-			'date_paid' => $date_paid,
-		);
-		push @expenses, \%expense;
-	}		
-}
-
-sub get_string_from_pdf_file() {
+	if ($date_paid ne "" and $name ne "" and $transaction ne ""){
 		
-	my ($filename, $page) = @_;
-	
-	my $pdf = CAM::PDF->new($filename);
-	my $pageone_tree = $pdf->getPageContentTree($page);
-	
-	return CAM::PDF::PageText->render($pageone_tree);
+		next if (skip_entry($name));
+
+		my $type = ($transaction =~ m/-/) ? "expense" : ($transaction =~ m/\+/) ? "income" : undef;
+		my $amount = $1 if ($transaction =~ m/(\d{1,6},\d{2})/) ;
+		
+		my %expense = (
+			'name' => $name,
+			'amount' => $amount,
+			'type' => $type,
+			'date_created' => $date_created,
+			'date_paid' => $date_paid,
+		);
+		push @expenses, \%expense;
+		
+	}elsif( $date_created eq "" and $date_paid eq "" and $name ne "" and $transaction eq ""){ # Two line name 
+		print "Apending $name" if ($debug);
+		if (defined($expenses[scalar(@expenses)-1])){
+			$expenses[scalar(@expenses)-1]->{'name'} .= " $name";
+		}
+	}
 }
+
+
+
+=head1 skip_entry
+
+=head1 Checks for transactions names that shall not be stored
+
+=cut
 
 sub skip_entry {
 	
 	my ($name) = @_;
 	my @words_to_skip = (
 		"Einzahlung", # transfer from bank
+		"Ausgleich Kreditkarte", # transfer from bank
 		"Saldo letzte Abrechnung",
 		"Erste Bank, Wien", # cash
 		# ""
@@ -140,14 +116,21 @@ sub skip_entry {
 }
 
 
+=head1 save_results
+
+=head1 Stores the result in a json with the same name as the pdf
+
+=cut
+
 sub save_results {
-	
+	# TODO make this look nicer
 	my ($file, $expenses_ref) = @_;
 	
-	$file =~ s/.pdf//g;
-	my $filename = ".\\json\\$file.json";
+	$file =~ s/.csv//g;
+	$file =~ s/.+\///g; #remove path
+	my $filename = ".//json//$file.json";
 
-	open(FH, '>', $filename) or die $!;
+	open(FH, '>', $filename) or die "Error saving $filename $!";
 	print FH to_json($expenses_ref);
 	close(FH);
 
