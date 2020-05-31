@@ -7,13 +7,12 @@ use Text::CSV;
 
 my $debug = 0;
 
-my $src = "movements"; # Folder where all your pdfs are
+my $src = "credit_card_movements"; # Folder where all your pdfs are
 my $converted = "csv"; # Folder where pdfs will be converted to csv
 
 # Transform pdf to csv
-system("python pdf_to_csv_with_tabula.py $src $converted");
+system("python pdf_to_csv_with_tabula_credit.py $src $converted");
 print "PDF to CSV done\n";
-exit
 
 
 print "Processing data...\n";
