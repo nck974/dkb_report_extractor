@@ -65,7 +65,6 @@ sub filter_transactions {
 	my @words_to_skip = (
 		"KREDITKARTENABRECHNUNG", # transfer from self
 		"DKB VISACARD", # transfer from self
-		# ""
 	);
 
 	foreach my $word (@words_to_skip){
@@ -86,17 +85,12 @@ sub filter_transactions {
 sub save_entry {
 	
 	my ($date, $name, $transaction, $transaction_2) = @_;
-	# print "Date: $date, Name: $name, Trasaction: '$transaction' Transaction_2: '$transaction_2'\n";
 	
 	my $amount = (defined($transaction_2) and $transaction_2 ne "") ? $transaction_2 : $transaction;
-	# print "Amount: $amount\n";
-	
 	my ($date_created, $date_paid) =  ($date =~ m/  (\d{2}\.\d{2}\.)  \s+  (\d{2}\.\d{2}\.)  /x) ? ($1.$year, $2.$year) : ("","");
-	# print "Date created: $date_created Date_paid: $date_paid\n";
+	
 	if ($date_created ne "" and $name ne "" and $amount ne "" ){
 		
-		# next if (skip_entry($name));
-
 		my $type = get_type($name);		
 		my %expense = (
 			'name' => $name,
@@ -138,31 +132,6 @@ sub get_type {
 	return "expense";
 }
 
-=head1 skip_entry
-
-=head1 Checks for transactions names that shall not be stored
-
-=cut
-
-# sub skip_entry {
-	
-	# my ($name) = @_;
-	# my @words_to_skip = (
-		# "Einzahlung", # transfer from bank
-		# "Ausgleich Kreditkarte", # transfer from bank
-		# "Saldo letzte Abrechnung",
-		# "Erste Bank, Wien", # cash
-	# );
-
-	# foreach my $word (@words_to_skip){
-		# if ($name =~ m/\Q$word/){
-			# print "Skipping $name\n";
-			# return 1 ;
-		# }
-	# }
-	
-	# return 0;
-# }
 
 
 =head1 save_results
@@ -172,7 +141,7 @@ sub get_type {
 =cut
 
 sub save_results {
-	# TODO make this look nicer
+
 	my ($file, $expenses_ref) = @_;
 	
 	$file =~ s/.csv//g;

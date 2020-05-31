@@ -13,4 +13,3 @@ files = [f for f in os.listdir(directory) if re.match(r'.+\.pdf', f)]
 for file in files:
     print(os.path.join(directory, file))
     convert_into(os.path.join(directory, file), output_path=os.path.join(output, file.replace(".pdf",".csv" )), pages='all')
-    # convert_into(os.path.join(directory, file), output_path=os.path.join(output, file.replace(".pdf",".csv" )), pages='all', area=[[409,39,750,590]])
