@@ -8,18 +8,22 @@ The tabula library is requiered in python:
 https://tabula-py.readthedocs.io/en/latest/tabula.html#tabula.io.build_options
 
 The following folder structure is needed:
-`.
+```
 ├── _archive
-
-├── csv # Intermediate step
-
-├── json # This is your output
-
-├── movements # Store here your pdfs
-
-├── pdf_to_csv_with_tabula.py
-
-├── extract.pl
-
+├── bank_transactions # PDF exports of the DKB bank transactions
+├── credit_card_movements # PDF exports of the DKB credit card abrrechnungen
+├── csv # intermediate folder
+├── csv_transactions # intermediate folder
+├── extract_bank_transactions.pl
+├── extract_credit_card_movements.pl
+├── json # Both results will be stored here
+├── pdf_to_csv_with_tabula_credit.py
+├── pdf_to_csv_with_tabula_movements.py
 └── README.md
-`
+```
+
+Just execute with the following once the pdfs and folders are set up:
+```
+perl extract_bank_transactions.pl
+perl extract_credit_card_movements.pl
+```
