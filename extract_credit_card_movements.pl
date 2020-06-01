@@ -1,5 +1,5 @@
 use strict;
-use utf8;
+use utf8::all; 
 
 use Data::Dumper;
 use JSON;
@@ -23,7 +23,7 @@ my $csv = Text::CSV->new({ sep_char => ',' });
 foreach my $filename (@files){
 	print "Processing $filename\n";
 	undef @expenses; # remove data from previos interaction
-	open(my $data, '<', $filename) or die "Could not open '$filename' $!\n";
+	open(my $data, '<:encoding(cp1252)', $filename) or die "Could not open '$filename' $!\n"; # tabula outputs ANSI
 	while (my $line = <$data>) {
 		chomp $line;
 	 

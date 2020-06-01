@@ -1,6 +1,5 @@
 use strict;
-use utf8;
-use open qw/ :std :encoding(utf-8) /;
+use utf8::all; 
 
 use Data::Dumper;
 use JSON;
@@ -15,7 +14,6 @@ my $converted = "csv_transactions"; # Folder where pdfs will be converted to csv
 system("python pdf_to_csv_with_tabula_movements.py $src $converted");
 print "PDF to CSV done\n";
 
-
 print "Processing data...\n";
 my @expenses;
 my $year;
@@ -25,7 +23,7 @@ foreach my $filename (@files){
 	print "Processing $filename\n";
 	$year = $1 if ($filename =~ m/_Nr_(\d{4})_/);
 	undef @expenses; # remove data from previos interaction
-	open(my $data, '<', $filename) or die "Could not open '$filename' $!\n";
+	open(my $data, '<:encoding(cp1252)', $filename) or die "Could not open '$filename' $!\n"; # tabula outputs ANSI
 	while (my $line = <$data>) {
 		chomp $line;
 		print $line."\n" if ($debug);
@@ -82,6 +80,7 @@ sub filter_transactions {
 =head1 Stores an entry in the global array of expenses
 
 =cut
+
 sub save_entry {
 	
 	my ($date, $name, $transaction, $transaction_2) = @_;
